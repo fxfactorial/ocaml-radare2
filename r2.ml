@@ -49,7 +49,7 @@ let open_file f_name =
 (* Heavy handed but we ensure that r2 is killed *)
 let close {pid; _} =
   Unix.kill pid Sys.sigkill;
-  Unix.waitpid [] pid;
+  Unix.waitpid [] pid |> ignore;
   ()
 
 let with_command ~cmd f_name =
