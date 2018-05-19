@@ -10,7 +10,7 @@ let read_result read_from =
     try
       while true do
         Unix.read read_from buf 0 1 |> ignore;
-        if buf = "\x00" then raise Stop_read
+        if buf = (Bytes.of_string "\x00") then raise Stop_read
         else Buffer.add_bytes b buf
       done
     with Stop_read -> ()
@@ -20,7 +20,7 @@ let read_result read_from =
 let send_command {write_to; read_from; _} cmd =
   let c = Printf.sprintf "%s\n" cmd in
   ignore (Unix.write_substring write_to c 0 (String.length c));
-  read_result read_from |> String.trim
+  read_result read_from |> Bytes.trim |> Bytes.to_string
 
 let command ~r2 cmd = send_command r2 cmd
 
