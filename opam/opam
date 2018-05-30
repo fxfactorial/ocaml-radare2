@@ -1,7 +1,7 @@
 # -*- conf -*-
 opam-version: "1.2"
 name: "radare2"
-version: "0.0.1"
+version: "0.0.2"
 maintainer: "Edgar Aroutiounian <edgar.factorial@gmail.com>"
 authors: [ "Edgar Aroutiounian <edgar.factorial@gmail.com>" ]
 license: "BSD-3-clause"
@@ -9,30 +9,22 @@ homepage: "https://github.com/fxfactorial/ocaml-radare2"
 dev-repo: "https://github.com/fxfactorial/ocaml-radare2.git"
 bug-reports: "https://github.com/fxfactorial/ocaml-radare2/issues"
 build: [
-  ["oasis" "setup"]
-  ["ocaml" "setup.ml" "-configure" "--prefix" prefix]
-  ["ocaml" "setup.ml" "-build"]
-]
-install: ["ocaml" "setup.ml" "-install"]
-remove: [
-  ["ocamlfind" "remove" "radare2"]
-]
-build-test: [
-  ["oasis" "setup"]
-  ["ocaml" "setup.ml" "-configure" "--enable-tests"]
-  ["ocaml" "setup.ml" "-build"]
-  ["ocaml" "setup.ml" "-test"]
+	["jbuilder" "subst" "-n" name] {pinned}
+	["jbuilder" "build" "-p" name "-j" jobs]
 ]
 depexts: [
   [["debian"] ["radare2"]]
   [["ubuntu"] ["radare2"]]
+  [["fedora"] ["radare2"]]
+  [["archlinux"] ["radare2"]]
+  [["gentoo"] ["radare2"]]
   [["homebrew" "osx"] ["radare2"]]
 ]
 depends: [
-  "base-unix"
-  "oasis" {build & >= "0.4"}
+  "jbuilder" {build}
   "ocamlbuild" {build}
   "ocamlfind" {build}
+  "base-unix"
   ("yojson" {>= "1.3.2"} | "yojson-android" {>= "1.3.2"})
 ]
 messages:[
@@ -47,7 +39,7 @@ post-messages:[
 "#require \"radare2\";;"
 "let result = R2.with_command_j ~cmd:\"/j chown\" \"/bin/ls\";;
 val result : Yojson.Basic.json =
-`List 
+`List
   [`Assoc
        [(\"offset\", `Int 4294987375); (\"id:\", `Int 0);
         (\"data\", `String \"ywritesecuritychownfile_inheritdi\")]]"

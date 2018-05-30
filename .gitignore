@@ -1,3 +1,7 @@
+# Vim temporary files
+*.sw[op]
+*.un~
+
 *.annot
 *.cmo
 *.cma
