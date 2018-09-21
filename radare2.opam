@@ -9,8 +9,8 @@ homepage: "https://github.com/fxfactorial/ocaml-radare2"
 dev-repo: "https://github.com/fxfactorial/ocaml-radare2.git"
 bug-reports: "https://github.com/fxfactorial/ocaml-radare2/issues"
 build: [
-	["jbuilder" "subst" "-n" name] {pinned}
-	["jbuilder" "build" "-p" name "-j" jobs]
+	["dune" "subst" "-n" name] {pinned}
+	["dune" "build" "-p" name "-j" jobs]
 ]
 depexts: [
   [["debian"] ["radare2"]]
@@ -21,7 +21,7 @@ depexts: [
   [["homebrew" "osx"] ["radare2"]]
 ]
 depends: [
-  "jbuilder" {build}
+  "dune" {build}
   "ocamlbuild" {build}
   "ocamlfind" {build}
   "base-unix"
