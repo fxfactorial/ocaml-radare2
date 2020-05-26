@@ -34,12 +34,15 @@ post-messages:[
 "Example in utop:"
 ""
 "#require \"radare2\";;"
-"let result = R2.with_command_j ~cmd:\"/j chown\" \"/bin/ls\";;
-val result : Yojson.Basic.json =
+"let result = R2.with_command_j ~cmd:\"/j COLUMNS\" \"/bin/ls\";;
+val result : Yojson.Basic.t =
 `List
   [`Assoc
-       [(\"offset\", `Int 4294987375); (\"id:\", `Int 0);
-        (\"data\", `String \"ywritesecuritychownfile_inheritdi\")]]"
+     [(\"offset\", `Int 109075); (\"type\", `String \"string\");
+      (\"data\", `String \"eQUOTING_STYLECOLUMNSTABSIZEinvalid\")];
+   `Assoc
+     [(\"offset\", `Int 118247); (\"type\", `String \"string\");
+      (\"data\", `String \"onment variable COLUMNS: %signori\")]]"
 {success}]
 synopsis: "OCaml interface to r2"
 description: """
@@ -47,9 +50,12 @@ Interact with radare2,
 See the mli for documentation, example usage in utop:
 
 #require "radare2";;
-let result = R2.with_command_j ~cmd:"/j chown" "/bin/ls";;
-val result : Yojson.Basic.json =
+let result = R2.with_command_j ~cmd:"/j COLUMNS" "/bin/ls";;
+val result : Yojson.Basic.t =
 `List
   [`Assoc
-    [("offset", `Int 4294987375); ("id:", `Int 0);
-     ("data", `String "ywritesecuritychownfile_inheritdi")]]\""""
+     [("offset", `Int 109075); ("type", `String "string");
+      ("data", `String "eQUOTING_STYLECOLUMNSTABSIZEinvalid")];
+   `Assoc
+     [("offset", `Int 118247); ("type", `String "string");
+      ("data", `String "onment variable COLUMNS: %signori")]]\""""

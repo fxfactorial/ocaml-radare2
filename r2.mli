@@ -7,8 +7,8 @@ type r2
 val command : r2:r2 -> string -> string
 
 (** Send a command to r2, get back Yojson. If output isn't JSON
-    parsable then raises {Invalid_argument} so make sure command starts
-    with /j *)
+    parsable then raises {Invalid_argument} so make sure command ends
+    with 'j' *)
 val command_json : r2:r2 -> string -> Yojson.Basic.t
 
 (** Create a r2 instance with a given file, raises {Invalid_argument}

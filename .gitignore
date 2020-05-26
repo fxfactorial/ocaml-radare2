@@ -12,12 +12,8 @@
 *.cmxs
 *.cmxa
 
-# ocamlbuild working directory
+# Merlin file
+.merlin
+
+# dune working directory
 _build/
-
-# ocamlbuild targets
-*.byte
-*.native
-
-# jbuild generated files
-radare2.install
