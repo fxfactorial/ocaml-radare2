@@ -24,9 +24,12 @@ let send_command {write_to; read_from; _} cmd =
 
 let command ~r2 cmd = send_command r2 cmd
 
+let parse_json s =
+  (Yojson.Safe.from_string s :> Yojson.t)
+
 let command_json ~r2 cmd =
   try
-    send_command r2 cmd |> Yojson.Basic.from_string
+    send_command r2 cmd |> parse_json
   with
     Yojson.Json_error _ ->
     raise (Invalid_argument "Output wasn't JSON parsable, \
@@ -62,4 +65,4 @@ let with_command_j ~cmd f_name =
   let r2 = open_file f_name in
   let output = command ~r2 cmd in
   close r2;
-  output |> Yojson.Basic.from_string
+  output |> parse_json
