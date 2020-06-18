@@ -35,7 +35,7 @@ post-messages:[
 ""
 "#require \"radare2\";;"
 "let result = R2.with_command_j ~cmd:\"/j COLUMNS\" \"/bin/ls\";;
-val result : Yojson.Basic.t =
+val result : Yojson.t =
 `List
   [`Assoc
      [(\"offset\", `Int 109075); (\"type\", `String \"string\");
@@ -51,7 +51,7 @@ See the mli for documentation, example usage in utop:
 
 #require "radare2";;
 let result = R2.with_command_j ~cmd:"/j COLUMNS" "/bin/ls";;
-val result : Yojson.Basic.t =
+val result : Yojson.t =
 `List
   [`Assoc
      [("offset", `Int 109075); ("type", `String "string");
