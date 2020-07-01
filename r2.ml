@@ -71,8 +71,8 @@ end
           extract_number ver (pos+1) (dot-pos-1)
 
   let supported = lazy begin
-    let major,minor = parse @@ read_version () in
-    if not (major >= 2 && minor >= 3)
+    let version = parse @@ read_version () in
+    if version < (2,3)
     then invalid_arg "incompatible radare version: please install r2 >= 2.3.0"
   end
 end
