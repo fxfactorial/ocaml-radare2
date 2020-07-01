@@ -35,7 +35,50 @@ let command_json ~r2 cmd =
     raise (Invalid_argument "Output wasn't JSON parsable, \
                              make sure you used /j")
 
+module Version : sig
+  val supported : unit Lazy.t
+end
+= struct
+  let system_error msg =
+    invalid_arg ("Failed to run radare2: " ^ Unix.error_message msg)
+
+  let try_finally f x ~finally =
+    try let r = f x in finally x; r
+    with exn -> finally x; raise exn
+
+  let read_version () =
+    match Unix.open_process_in "r2 -qv" with
+    | exception Unix.Unix_error (msg,_,_) -> system_error msg
+    | output -> try_finally input_line output
+                  ~finally:close_in
+
+  let extract_number str pos len =
+    try int_of_string (String.sub str pos len)
+    with Failure _ -> invalid_arg "invalid version format"
+
+  let parse ver =
+    let len = String.length ver in
+    match String.index ver '.' with
+    | exception Not_found -> extract_number ver 0 len,0
+    | pos ->
+      extract_number ver 0 pos,
+      if pos = len - 1 then 0
+      else match String.index_from ver (pos+1) '.' with
+        | exception Not_found ->
+          if pos = len - 1 then 0
+          else extract_number ver (pos+1) (len-pos-1)
+        | dot ->
+          extract_number ver (pos+1) (dot-pos-1)
+
+  let supported = lazy begin
+    let major,minor = parse @@ read_version () in
+    if not (major >= 2 && minor >= 3)
+    then invalid_arg "incompatible radare version: please install r2 >= 2.3.0"
+  end
+end
+
 let open_file f_name =
+  let lazy () = Version.supported in
   if not (Sys.file_exists f_name) then
     raise (Invalid_argument "Non-existent file")
   else
