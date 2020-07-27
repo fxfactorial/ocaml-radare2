@@ -93,10 +93,14 @@ let open_file f_name =
     {pid; read_from = out_r; write_to = ins_w}
 
 (* Heavy handed but we ensure that r2 is killed *)
-let close {pid; _} =
-  Unix.kill pid Sys.sigkill;
-  Unix.waitpid [] pid |> ignore;
-  ()
+let close r2 =
+  let _ = command ~r2 "q" in
+  match Unix.waitpid [] r2.pid with
+  | _, Unix.WEXITED _ -> ()
+  | 0, _
+  | _, _ ->
+    Unix.kill r2.pid Sys.sigkill;
+    Unix.waitpid [] r2.pid |> ignore
 
 let with_command ~cmd f_name =
   let r2 = open_file f_name in
