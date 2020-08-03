@@ -1,26 +1,43 @@
-type r2 =
-  {pid : int; read_from : Unix.file_descr; write_to : Unix.file_descr}
+type r2 = {
+  pid : int;
+  fdw : Unix.file_descr;
+  fdr : Unix.file_descr;
+}
 
-exception Stop_read
+let bufsize = 512
 
-let read_result read_from =
-  let b = Buffer.create 1 in
-  let buf = Bytes.create 1 in
-  begin
-    try
-      while true do
-        Unix.read read_from buf 0 1 |> ignore;
-        if buf = (Bytes.of_string "\x00") then raise Stop_read
-        else Buffer.add_bytes b buf
-      done
-    with Stop_read -> ()
-  end;
-  Buffer.to_bytes b
+let find_null data ~pos ~len =
+  let rec find pos =
+    if pos < len
+    then if Bytes.get data pos = '\000'
+      then Some pos else find (pos+1)
+    else None in
+  find pos
 
-let send_command {write_to; read_from; _} cmd =
+exception No_input
+
+let rec read_spin fd data =
+  match Unix.read fd data 0 (Bytes.length data) with
+  | exception (Unix.Unix_error ((Unix.EAGAIN | EWOULDBLOCK),_,_)) ->
+    read_spin fd data
+  | 0 -> raise No_input
+  | n -> n
+
+let read {fdr; _} =
+  let buf = Buffer.create bufsize in
+  let data = Bytes.create bufsize in
+  let rec fill () =
+    let len = read_spin fdr data in
+    match find_null data ~pos:0 ~len with
+    | None -> Buffer.add_subbytes buf data 0 len; fill ()
+    | Some pos -> Buffer.add_subbytes buf data 0 pos in
+  fill ();
+  Buffer.contents buf
+
+let send_command r2 cmd =
   let c = Printf.sprintf "%s\n" cmd in
-  ignore (Unix.write_substring write_to c 0 (String.length c));
-  read_result read_from |> Bytes.trim |> Bytes.to_string
+  ignore (Unix.write_substring r2.fdw c 0 (String.length c));
+  read r2
 
 let command ~r2 cmd = send_command r2 cmd
 
@@ -47,7 +64,7 @@ end
     with exn -> finally x; raise exn
 
   let read_version () =
-    match Unix.open_process_in "r2 -qv" with
+    match Unix.open_process_in "radare2 -qv" with
     | exception Unix.Unix_error (msg,_,_) -> system_error msg
     | output -> try_finally input_line output
                   ~finally:close_in
@@ -77,30 +94,53 @@ end
   end
 end
 
+let close ({pid; fdw; fdr; _} as r2) =
+  let _ : string = command ~r2 "q" in
+  List.iter Unix.close [fdw; fdr];
+  match Unix.waitpid [] pid with
+  | _,Unix.WEXITED 0 -> ()
+  | _,Unix.WEXITED n ->
+    failwith ("radare2 terminated with a non-zero exit code: " ^
+              string_of_int n)
+  | _,Unix.WSIGNALED _
+  | _,Unix.WSTOPPED _ -> failwith "radare2 was killed"
+
+let readall ch =
+  let buf = Buffer.create bufsize in
+  let rec read () = Buffer.add_channel buf ch bufsize; read () in
+  try read () with End_of_file -> Buffer.contents buf
+
+
+
 let open_file f_name =
   let lazy () = Version.supported in
   if not (Sys.file_exists f_name) then
     raise (Invalid_argument "Non-existent file")
   else
-    let (ins_r, ins_w),
-        (out_r, out_w),
-        (_, err_w) = Unix.(pipe (), pipe (), pipe ())
-    in
-    let args = [|"r2"; "-2"; "-q0"; f_name|] in
-    let pid = Unix.create_process "r2" args ins_r out_w err_w in
-    (* Get rid of the beginning \x00 *)
-    ignore (Unix.read out_r (Bytes.create 1) 0 1);
-    {pid; read_from = out_r; write_to = ins_w}
-
-(* Heavy handed but we ensure that r2 is killed *)
-let close r2 =
-  let _ = command ~r2 "q" in
-  match Unix.waitpid [] r2.pid with
-  | _, Unix.WEXITED _ -> ()
-  | 0, _
-  | _, _ ->
-    Unix.kill r2.pid Sys.sigkill;
-    Unix.waitpid [] r2.pid |> ignore
+    let i_r, i_w = Unix.pipe ()
+    and o_r, o_w = Unix.pipe ()
+    and e_r, e_w = Unix.pipe () in
+    match Unix.fork () with
+    | 0 ->
+      Unix.dup2 i_r Unix.stdin;
+      Unix.dup2 o_w Unix.stdout;
+      Unix.dup2 e_w Unix.stderr;
+      Unix.execv "/bin/sh" [|"/bin/sh"; "-c"; "radare2 -q0 " ^ f_name|]
+    | pid ->
+      List.iter Unix.close [i_r; o_w; e_w];
+      Unix.set_nonblock o_r;
+      let err = Unix.in_channel_of_descr e_r in
+      let r2 = {pid; fdw=i_w; fdr=o_r} in
+      match read r2 with
+      | exception No_input ->
+        List.iter Unix.close [i_w; o_r];
+        let problem = readall err in
+        close_in err;
+        invalid_arg ("Failed to start radare2 process: " ^ problem)
+      | "" -> r2
+      | s ->
+        close r2;
+        failwith ("spurious output on open: " ^ s)
 
 let with_command ~cmd f_name =
   let r2 = open_file f_name in
